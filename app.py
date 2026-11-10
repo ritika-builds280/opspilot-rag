@@ -6,6 +6,15 @@ from google import genai
 import chromadb
 import os
 import hashlib
+import time
+
+# Streamlit interface
+st.set_page_config(
+    page_title="OpsPilot",
+    page_icon="🤖",
+    layout="wide"
+)
+
 
 # Load API key
 load_dotenv()
@@ -88,6 +97,7 @@ def generate_embeddings(texts, task_type):
     ]
 
 
+
 # Generate answer using retrieved context and conversation history
 def generate_answer(question, context, chat_history=""):
 
@@ -100,27 +110,19 @@ only on the uploaded IT documentation.
 IMPORTANT RULES:
 
 1. Use ONLY the provided documentation to answer questions.
-
 2. Do not use your general knowledge to fill gaps in the documentation.
-
 3. Distinguish between a topic being mentioned and a procedure
-being fully documented.
-
+   being fully documented.
 4. If a topic is mentioned but the actual steps or instructions
-are missing, clearly explain that the procedure is not documented.
-
+   are missing, clearly explain that the procedure is not documented.
 5. Never invent commands, technical steps, configurations,
-recommendations, or troubleshooting instructions.
-
+   recommendations, or troubleshooting instructions.
 6. If the documentation explicitly mentions an approval requirement
-or safety restriction, include it in your answer.
-
+   or safety restriction, include it in your answer.
 7. If the documentation does not contain relevant information,
-state that the information is unavailable in the uploaded documents.
-
+   state that the information is unavailable in the uploaded documents.
 8. Use conversation history only to understand follow-up questions.
-Always base technical answers on the provided documentation.
-
+   Always base technical answers on the provided documentation.
 9. Give clear, beginner-friendly answers.
 
 Previous Conversation:
@@ -135,46 +137,47 @@ Current Question:
 Answer:
 """
 
-    try:
-        response = gemini_client.models.generate_content(
-            model="gemini-3.8-flash",
-            contents=prompt
-        )
-
-        if not response.text:
-            return "I couldn't generate an answer. Please try again."
-
-        return response.text
-
-    except Exception as error:
-        error_message = str(error)
-        print("Gemini API Error:", error_message)
-
-        if "429" in error_message or "RESOURCE_EXHAUSTED" in error_message:
-            return (
-                "Gemini API quota exceeded. "
-                "Please try again after your API quota resets."
+    for attempt in range(3):
+        try:
+            response = gemini_client.models.generate_content(
+                model="gemini-3.8-flash",
+                contents=prompt
             )
 
-        elif "503" in error_message or "UNAVAILABLE" in error_message:
-            return (
-                "Gemini service is temporarily unavailable. "
-                "Please try again later."
-            )
+            if not response.text:
+                return "I couldn't generate an answer. Please try again."
 
-        else:
-            return (
-                "Unable to generate an answer due to a temporary API error. "
-                "Please try again later."
-            )
+            return response.text
+
+        except Exception as error:
+            error_message = str(error)
+            print("Gemini API Error:", error_message)
+
+            if "503" in error_message or "UNAVAILABLE" in error_message:
+                if attempt < 2:
+                    wait_time = 2 ** (attempt + 1)
+                    print(f"Retrying Gemini request in {wait_time} seconds...")
+                    time.sleep(wait_time)
+                    continue
+
+                return (
+                    "Gemini service is temporarily unavailable after "
+                    "multiple attempts. Please try again later."
+                )
+
+            elif "429" in error_message or "RESOURCE_EXHAUSTED" in error_message:
+                return (
+                    "Gemini API quota exceeded. "
+                    "Please try again after your API quota resets."
+                )
+
+            else:
+                return (
+                    "Unable to generate an answer due to an API error. "
+                    "Please try again later."
+                )
 
 
-# Streamlit interface
-st.set_page_config(
-    page_title="OpsPilot",
-    page_icon="🤖",
-    layout="wide"
-)
 
 st.title("🤖 OpsPilot - IT Knowledge Assistant")
 

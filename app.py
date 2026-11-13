@@ -15,6 +15,73 @@ st.set_page_config(
     layout="wide"
 )
 
+# Custom OpsPilot UI styling
+st.markdown("""
+<style>
+    .stApp {
+        background-color: #F5F7FB;
+    }
+
+    [data-testid="stSidebar"] {
+        background-color: #172B4D;
+    }
+
+    [data-testid="stSidebar"] * {
+        color: #FFFFFF;
+    }
+
+    .main .block-container {
+        padding-top: 2rem;
+        padding-bottom: 3rem;
+        max-width: 1200px;
+    }
+
+    h1, h2, h3 {
+        color: #172B4D;
+    }
+
+    div.stButton > button {
+        background-color: #244A78;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 0.5rem 1.2rem;
+        font-weight: 600;
+    }
+
+    div.stButton > button:hover {
+        background-color: #3569A5;
+        color: white;
+    }
+
+    [data-testid="stFileUploader"] {
+        background-color: #FFFFFF;
+        border: 1px dashed #AAB8CC;
+        border-radius: 10px;
+        padding: 12px;
+    }
+
+   [data-testid="stChatMessage"] {
+    background-color: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 16px;
+}
+
+[data-testid="stChatMessageContent"] {
+    line-height: 1.7;
+}
+
+[data-testid="stChatInput"] {
+    border-radius: 12px;
+}
+
+    hr {
+        border-color: #DCE3ED;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 # Load API key
 load_dotenv()
@@ -37,8 +104,15 @@ collection = chroma_client.get_or_create_collection(
    name="opspilot_documents_v2"
 )
 
-# Display processed documents
-st.subheader("Processed Documents")
+# Sidebar - Processed Documents
+st.sidebar.title("📚 Knowledge Base")
+
+if st.sidebar.button("➕ New Chat", use_container_width=True):
+    st.session_state.chat_history = []
+    st.session_state.pop("suggested_question", None)
+    st.rerun()
+
+st.sidebar.subheader("Processed Documents")
 
 stored_documents = collection.get(
     include=["metadatas"]
@@ -50,22 +124,28 @@ if stored_documents["metadatas"]:
         for item in stored_documents["metadatas"]
     ))
 
+    st.sidebar.caption(
+        f"{len(document_names)} document(s) available"
+    )
+
     for document_name in document_names:
-        col1, col2 = st.columns([4, 1])
+        with st.sidebar.container():
+            st.sidebar.write(f"📄 {document_name}")
 
-        with col1:
-            st.write(f"📄 {document_name}")
-
-        with col2:
-            if st.button("Delete", key=f"delete_{document_name}"):
+            if st.sidebar.button(
+                "Delete",
+                key=f"delete_{document_name}"
+            ):
                 collection.delete(
                     where={"filename": document_name}
                 )
-                st.success(f"{document_name} deleted successfully.")
+                st.sidebar.success(
+                    f"{document_name} deleted successfully."
+                )
                 st.rerun()
 
 else:
-    st.info("No documents have been processed yet.")
+    st.sidebar.info("No documents uploaded yet.")
 # Split text into chunks
 def split_into_chunks(text, chunk_size=500, overlap=100):
     chunks = []
@@ -185,12 +265,21 @@ Answer:
 
 
 
-st.title("🤖 OpsPilot - IT Knowledge Assistant")
-
-st.write(
-    "Upload IT documentation and ask questions "
-    "to get answers based on your documents."
-)
+# Main application header
+st.markdown("""
+<div style="padding: 10px 0 25px 0;">
+    <h1 style="font-size: 38px; margin-bottom: 5px;">
+        🤖 OpsPilot
+    </h1>
+    <p style="font-size: 17px; color: #64748B;">
+        Your AI-powered IT Knowledge Assistant
+    </p>
+    <p style="font-size: 14px; color: #64748B;">
+        Ask questions, explore technical procedures, and find answers
+        directly from your uploaded documentation.
+    </p>
+</div>
+""", unsafe_allow_html=True)
 
 # Store conversation history during the current session
 if "chat_history" not in st.session_state:
@@ -198,9 +287,9 @@ if "chat_history" not in st.session_state:
 
 
 # PDF upload
-st.subheader("1. Upload IT Documentation")
+st.sidebar.subheader("Upload IT Documentation")
 
-uploaded_files = st.file_uploader(
+uploaded_files = st.sidebar.file_uploader(
     "Choose PDF documents",
     type=["pdf"],
     accept_multiple_files=True
@@ -208,8 +297,8 @@ uploaded_files = st.file_uploader(
 if uploaded_files:
     for uploaded_file in uploaded_files:
 
-        if st.button(
-            f"Process {uploaded_file.name}",
+       if st.sidebar.button(
+    f"Process {uploaded_file.name}",
             key=uploaded_file.name
         ):
             try:
@@ -298,32 +387,132 @@ if uploaded_files:
                 st.error(f"PDF processing failed: {error}")
 
 
+
 # Ask questions
 st.divider()
 
-st.subheader("2. Ask OpsPilot")
+st.subheader("Chat with OpsPilot")
 
-question = st.text_input(
-    "Enter your question about the uploaded documentation:"
+
+# Welcome screen when no conversation exists
+if not st.session_state.chat_history:
+
+    st.markdown("""
+    <div style="
+        background: linear-gradient(135deg, #FFFFFF, #EEF4FC);
+        padding: 45px 30px;
+        border-radius: 18px;
+        text-align: center;
+        border: 1px solid #DCE6F2;
+        margin: 25px 0;
+        box-shadow: 0 4px 15px rgba(23, 43, 77, 0.05);
+    ">
+        <div style="font-size: 52px; margin-bottom: 10px;">🤖</div>
+        <h2 style="color: #172B4D; margin-bottom: 10px;">
+            Welcome to OpsPilot!
+        </h2>
+        <p style="color: #475569; font-size: 17px;">
+            Your intelligent IT Knowledge Assistant
+        </p>
+        <p style="color: #64748B; font-size: 15px;">
+            Explore your IT documentation, find technical procedures,
+            and get answers grounded in your uploaded SOPs.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("#### 💡 Try asking OpsPilot")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button(
+            "💾 Check available disk space",
+            use_container_width=True
+        ):
+            st.session_state.suggested_question = (
+                "How can I check available disk space?"
+            )
+            st.rerun()
+
+    with col2:
+        if st.button(
+            "⚙️ Check Windows service status",
+            use_container_width=True
+        ):
+            st.session_state.suggested_question = (
+                "How can I check Windows service status?"
+            )
+            st.rerun()
+
+# Display previous conversation messages
+for item in st.session_state.chat_history:
+
+    with st.chat_message("user"):
+        st.markdown(item["question"])
+
+    with st.chat_message("assistant"):
+        st.markdown(item["answer"])
+
+        sources = item.get("sources", [])
+
+        if sources:
+            with st.expander("📚 Source Documents"):
+                for source in sources:
+                    st.markdown(
+                        f"""
+                        <div style="
+                            background-color: white;
+                            border: 1px solid #E2E8F0;
+                            border-radius: 8px;
+                            padding: 12px;
+                            margin-bottom: 8px;
+                        ">
+                            <div style="font-weight: 600; color: #244A78;">
+                                📄 {source['filename']}
+                            </div>
+                            <div style="font-size: 13px; color: #64748B;">
+                                Page {source['page']}
+                            </div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+
+# Chat input
+question = st.chat_input(
+    "Ask a question about your uploaded IT documents..."
 )
 
+if st.session_state.get("suggested_question"):
+    question = st.session_state.suggested_question
+    del st.session_state.suggested_question
 
+if question:
 
-if st.button("Get Answer"):
+    if collection.count() == 0:
+        answer = "Please upload and process a PDF first."
+        sources = []
 
-    if not question.strip():
-        st.warning("Please enter a question.")
+        st.session_state.chat_history.append({
+            "question": question,
+            "answer": answer,
+            "sources": sources
+        })
 
-    elif collection.count() == 0:
-        st.warning("Please upload and process a PDF first.")
+        st.rerun()
 
     else:
         try:
-           
+            with st.chat_message("user"):
+                st.markdown(question)
+
             with st.spinner("Searching documentation..."):
 
                 if st.session_state.chat_history:
-                    previous_question = st.session_state.chat_history[-1]["question"]
+                    previous_question = (
+                        st.session_state.chat_history[-1]["question"]
+                    )
 
                     retrieval_query = (
                         f"Previous question: {previous_question}\n"
@@ -336,7 +525,6 @@ if st.button("Get Answer"):
                     [retrieval_query],
                     "RETRIEVAL_QUERY"
                 )[0]
-
 
                 results = collection.query(
                     query_embeddings=[query_embedding],
@@ -359,13 +547,13 @@ if st.button("Get Answer"):
                 ]
 
             if not relevant_results:
-                st.warning(
+                answer = (
                     "The uploaded documentation does not contain "
                     "sufficiently relevant information to answer "
                     "this question."
                 )
+                sources = []
 
-           
             else:
                 context = "\n\n".join(
                     doc for doc, metadata, distance in relevant_results
@@ -373,7 +561,8 @@ if st.button("Get Answer"):
 
                 chat_history_text = "\n".join(
                     [
-                        f"User: {item['question']}\nAssistant: {item['answer']}"
+                        f"User: {item['question']}\n"
+                        f"Assistant: {item['answer']}"
                         for item in st.session_state.chat_history
                     ]
                 )
@@ -385,16 +574,7 @@ if st.button("Get Answer"):
                         chat_history_text
                     )
 
-                st.session_state.chat_history.append({
-                    "question": question,
-                    "answer": answer
-                })
-
-                st.subheader("OpsPilot Answer")
-                st.write(answer)
-
-                st.subheader("Sources")
-
+                sources = []
                 displayed_sources = set()
 
                 for doc, metadata, distance in relevant_results:
@@ -404,27 +584,31 @@ if st.button("Get Answer"):
                     source_key = (filename, page)
 
                     if source_key not in displayed_sources:
-                        st.write(
-                            f"- {filename} (Page {page})"
-                        )
+                        sources.append({
+                            "filename": filename,
+                            "page": page
+                        })
                         displayed_sources.add(source_key)
 
+            # Save conversation
+            st.session_state.chat_history.append({
+                "question": question,
+                "answer": answer,
+                "sources": sources
+            })
+
+            # Refresh to display the complete conversation
+            st.rerun()
 
         except Exception as error:
             st.error(f"Unable to generate answer: {error}")
+
 
 if st.button("Clear Chat"):
     st.session_state.chat_history = []
     st.rerun()
 
-st.subheader("Conversation History")
 
-previous_chats = st.session_state.chat_history[:-1]
-
-for item in previous_chats:
-    st.markdown(f"**You:** {item['question']}")
-    st.markdown(f"**OpsPilot:** {item['answer']}")
-    st.divider()
 
 st.divider()
 

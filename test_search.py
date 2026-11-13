@@ -17,7 +17,7 @@ chroma_client = chromadb.PersistentClient(
 )
 
 collection = chroma_client.get_collection(
-    name="opspilot_documents"
+    name="opspilot_documents_v2"
 )
 
 # Ask a question
@@ -43,7 +43,12 @@ results = collection.query(
 # Display search results
 print("\nQuestion:", question)
 print("\nRelevant document chunks:\n")
-
-for document in results["documents"][0]:
+for chunk_id, document, distance in zip(
+    results["ids"][0],
+    results["documents"][0],
+    results["distances"][0]
+):
+    print(f"\nChunk ID: {chunk_id}")
+    print(f"Distance: {distance:.3f}")
     print(document)
     print("-------------------------")

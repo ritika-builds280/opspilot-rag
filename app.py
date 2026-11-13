@@ -124,6 +124,12 @@ IMPORTANT RULES:
 8. Use conversation history only to understand follow-up questions.
    Always base technical answers on the provided documentation.
 9. Give clear, beginner-friendly answers.
+10. Do not add extra fields, examples, recording requirements,
+    or procedural details unless they are explicitly supported
+    by the provided documentation.
+11. Clearly distinguish documented facts from information
+    that is not available in the documentation.
+12. Do not repeat the entire conversation history in your answer.
 
 Previous Conversation:
 {chat_history}
@@ -413,7 +419,9 @@ if st.button("Clear Chat"):
 
 st.subheader("Conversation History")
 
-for item in st.session_state.chat_history:
+previous_chats = st.session_state.chat_history[:-1]
+
+for item in previous_chats:
     st.markdown(f"**You:** {item['question']}")
     st.markdown(f"**OpsPilot:** {item['answer']}")
     st.divider()

@@ -15,7 +15,9 @@ st.set_page_config(
     layout="wide"
 )
 
+
 # Custom OpsPilot UI styling
+
 st.markdown("""
 <style>
     .stApp {
@@ -54,34 +56,66 @@ st.markdown("""
         color: white;
     }
 
-    [data-testid="stFileUploader"] {
-        background-color: #FFFFFF;
-        border: 1px dashed #AAB8CC;
-        border-radius: 10px;
-        padding: 12px;
+    /* Upload section */
+    [data-testid="stSidebar"] h3 {
+        color: #FFFFFF !important;
+        font-size: 18px !important;
+        font-weight: 700 !important;
     }
 
-   [data-testid="stChatMessage"] {
-    background-color: #FFFFFF;
-    border: 1px solid #E2E8F0;
-    border-radius: 14px;
-    padding: 18px;
-    margin-bottom: 16px;
-}
+    [data-testid="stSidebar"] [data-testid="stFileUploader"] {
+        background-color: #EAF2FC;
+        border: 1.5px dashed #6B94C4;
+        border-radius: 12px;
+        padding: 14px;
+    }
 
-[data-testid="stChatMessageContent"] {
-    line-height: 1.7;
-}
+    [data-testid="stSidebar"] [data-testid="stFileUploader"] * {
+        color: #172B4D !important;
+    }
 
-[data-testid="stChatInput"] {
-    border-radius: 12px;
-}
+    [data-testid="stSidebar"] [data-testid="stFileUploader"] small {
+        display: block !important;
+        visibility: visible !important;
+        color: #526B89 !important;
+        font-size: 12px !important;
+        opacity: 1 !important;
+    }
+
+    [data-testid="stSidebar"] [data-testid="stFileUploader"] button {
+        background-color: #244A78 !important;
+        color: #FFFFFF !important;
+        border-radius: 7px !important;
+        font-weight: 600 !important;
+    }
+
+    [data-testid="stSidebar"] [data-testid="stFileUploader"] button * {
+        color: #FFFFFF !important;
+    }
+
+    /* Chat messages */
+    [data-testid="stChatMessage"] {
+        background-color: #FFFFFF;
+        border: 1px solid #E2E8F0;
+        border-radius: 14px;
+        padding: 18px;
+        margin-bottom: 16px;
+    }
+
+    [data-testid="stChatMessageContent"] {
+        line-height: 1.7;
+    }
+
+    [data-testid="stChatInput"] {
+        border-radius: 12px;
+    }
 
     hr {
         border-color: #DCE3ED;
     }
 </style>
 """, unsafe_allow_html=True)
+
 
 # Load API key
 load_dotenv()
@@ -287,18 +321,21 @@ if "chat_history" not in st.session_state:
 
 
 # PDF upload
+
 st.sidebar.subheader("Upload IT Documentation")
 
 uploaded_files = st.sidebar.file_uploader(
     "Choose PDF documents",
     type=["pdf"],
-    accept_multiple_files=True
+    accept_multiple_files=True,
+    help="Maximum file size: 200MB per file. PDF format only."
 )
+
 if uploaded_files:
     for uploaded_file in uploaded_files:
 
-       if st.sidebar.button(
-    f"Process {uploaded_file.name}",
+        if st.sidebar.button(
+            f"Process {uploaded_file.name}",
             key=uploaded_file.name
         ):
             try:
@@ -316,16 +353,13 @@ if uploaded_files:
                     )
                     continue
 
-                pdf_reader = PdfReader(
-                    BytesIO(pdf_bytes)
-                )
+                pdf_reader = PdfReader(BytesIO(pdf_bytes))
                 all_chunks = []
 
                 for page_number, page in enumerate(
                     pdf_reader.pages, start=1
                 ):
                     page_text = page.extract_text() or ""
-
                     page_chunks = split_into_chunks(page_text)
 
                     for chunk_number, chunk in enumerate(
@@ -341,9 +375,7 @@ if uploaded_files:
                     st.warning("No readable text found in this PDF.")
                     continue
 
-                texts = [
-                    item["text"] for item in all_chunks
-                ]
+                texts = [item["text"] for item in all_chunks]
 
                 with st.spinner("Generating embeddings..."):
                     embeddings = generate_embeddings(
@@ -366,7 +398,6 @@ if uploaded_files:
                     for item in all_chunks
                 ]
 
-                # Remove older version of the same document
                 collection.delete(
                     where={"filename": uploaded_file.name}
                 )
@@ -385,6 +416,7 @@ if uploaded_files:
 
             except Exception as error:
                 st.error(f"PDF processing failed: {error}")
+
 
 
 

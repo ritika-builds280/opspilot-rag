@@ -214,3 +214,17 @@ It is intended for learning and demonstration purposes and is not a production I
 ## 12. Author
 
 Developed as a personal Generative AI portfolio project.
+
+
+---
+
+## Screenshots
+
+### 1. OpsPilot Home Dashboard
+![OpsPilot Home Dashboard](Screenshots/03_home_dashboard.png)
+
+### 2. PDF Document Upload
+![PDF Document Upload](Screenshots/01_pdf_upload.png)
+
+### 3. AI-Generated Answer with Source References
+![AI-Generated Answer](Screenshots/02_question_answer.png)
